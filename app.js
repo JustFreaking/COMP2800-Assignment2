@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
+const MongoStore = require('connect-mongo');
 const session = require('express-session');
 const Joi = require('joi');
 const bcrypt = require('bcrypt');
@@ -29,6 +30,9 @@ app.use(session({
     secret: node_session_secret,
     resave: false,
     saveUninitialized: true,
+    store: MongoStore.create({
+        mongoUrl: `mongodb+srv://${process.env.MONGODB_USER}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_HOST}/${process.env.MONGODB_DATABASE}?retryWrites=true&w=majority`
+    }),
     cookie: { maxAge: 3600000 }
 }));
 
