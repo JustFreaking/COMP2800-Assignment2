@@ -25,7 +25,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-
 app.use(session({
     secret: node_session_secret,
     resave: false,
@@ -39,7 +38,6 @@ app.use(session({
 mongoose.connect(`mongodb+srv://${process.env.MONGODB_USER}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_HOST}/${process.env.MONGODB_DATABASE}?retryWrites=true&w=majority`)
     .then(() => console.log('MongoDB connected successfully'))
     .catch(err => console.error('MongoDB connection error:', err));
-
 
 app.get('/', (req, res) => {
     if (req.session.user) {
@@ -82,7 +80,6 @@ app.get('/signup', (req, res) => {
 app.post('/signupSubmit', (req, res) => {
     const { username, email, password } = req.body;
 
-    // 1️⃣ 필수 항목 비어있는지 수동 체크 (에러 메세지를 개별로 보여줄 수 있음)
     if (!username) {
         return res.send(`
             <p>Username is required.</p>
@@ -104,7 +101,6 @@ app.post('/signupSubmit', (req, res) => {
         `);
     }
 
-    // 2️⃣ 값이 있으면 Joi로 형식 검사
     const schema = Joi.object({
         username: Joi.string().min(3),
         email: Joi.string().email(),
@@ -120,13 +116,11 @@ app.post('/signupSubmit', (req, res) => {
         `);
     }
 
-    // 3️⃣ 비밀번호 해시
     bcrypt.hash(password, 10, async (err, hashedPassword) => {
         if (err) {
             return res.send('Error hashing password.');
         }
 
-        // 4️⃣ MongoDB에 사용자 추가
         try {
             const newUser = new User({
                 username: username,
@@ -136,7 +130,6 @@ app.post('/signupSubmit', (req, res) => {
 
             await newUser.save();
 
-            // 5️⃣ 세션에 저장 후 리다이렉트
             req.session.user = { username, email };
             res.redirect('/members');
 
@@ -162,7 +155,6 @@ app.get('/login', (req, res) => {
 app.post('/loginSubmit', async (req, res) => {
     const { email, password } = req.body;
 
-    // 1️⃣ 필수 항목 검사
     if (!email) {
         return res.send(`
             <p>Email is required.</p>
@@ -176,7 +168,6 @@ app.post('/loginSubmit', async (req, res) => {
         `);
     }
 
-    // 2️⃣ Joi 형식 검사
     const schema = Joi.object({
         email: Joi.string().email(),
         password: Joi.string().min(6)
@@ -191,7 +182,6 @@ app.post('/loginSubmit', async (req, res) => {
         `);
     }
 
-    // 3️⃣ DB에서 사용자 찾기
     const user = await User.findOne({ email: email });
     if (!user) {
         return res.send(`
@@ -200,7 +190,6 @@ app.post('/loginSubmit', async (req, res) => {
         `);
     }
 
-    // 4️⃣ 비밀번호 비교
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
         return res.send(`
@@ -209,7 +198,7 @@ app.post('/loginSubmit', async (req, res) => {
         `);
     }
 
-    // 5️⃣ 세션에 사용자 이름 저장 후 이동
+
     req.session.user = { username: user.username, email: user.email };
     res.redirect('/members');
 });
