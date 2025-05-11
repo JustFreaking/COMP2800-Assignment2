@@ -16,7 +16,8 @@ const node_session_secret = 'ba1539a7-819e-4499-ae25-ae83d89f5f76';
 const userSchema = new mongoose.Schema({
     username: String,
     email: String,
-    password: String
+    password: String,
+    userType: { type: String, default: 'user' }
 });
 
 const User = mongoose.model('User', userSchema);
@@ -35,46 +36,26 @@ app.use(session({
     cookie: { maxAge: 3600000 }
 }));
 
+app.set('view engine', 'ejs');
+
 mongoose.connect(`mongodb+srv://${process.env.MONGODB_USER}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_HOST}/${process.env.MONGODB_DATABASE}?retryWrites=true&w=majority`)
     .then(() => console.log('MongoDB connected successfully'))
     .catch(err => console.error('MongoDB connection error:', err));
 
 app.get('/', (req, res) => {
     if (req.session.user) {
-        res.send(`
-            <p>Hello ${req.session.user.username}!</p>
-
-            <form method="GET" action="/members">
-                <button type="submit">Go to Members Area</button>
-            </form>
-
-            <form method="GET" action="/logout">
-                <button type="submit">Logout</button>
-            </form>
-        `);
+        res.render('index', { user: req.session.user });
     } else {
-        res.send(`
-            <form method="GET" action="/signup">
-                <button type="submit">Sign Up</button>
-            </form>
-
-            <form method="GET" action="/login">
-                <button type="submit">Log in</button>
-            </form>
-        `);
+        res.render('index', { user: null });
     }
 });
 
+
 app.get('/signup', (req, res) => {
-    res.send(`
-        <form method="POST" action="/signupSubmit">
-            <input type="text" name="username" placeholder="Username">
-            <input type="email" name="email" placeholder="Email">
-            <input type="password" name="password" placeholder="Password">
-            <button type="submit">Sign Up</button>
-        </form>
-    `);
+    res.render('signup');
 });
+
+
 
 
 app.post('/signupSubmit', (req, res) => {
@@ -130,7 +111,7 @@ app.post('/signupSubmit', (req, res) => {
 
             await newUser.save();
 
-            req.session.user = { username, email };
+            req.session.user = { username: user.username, email: user.email, userType: user.userType };
             res.redirect('/members');
 
         } catch (dbError) {
@@ -143,13 +124,7 @@ app.post('/signupSubmit', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-    res.send(`
-        <form method="POST" action="/loginSubmit">
-            <input type="email" name="email" placeholder="Email">
-            <input type="password" name="password" placeholder="Password">
-            <button type="submit">Log In</button>
-        </form>
-    `);
+    res.render('login');
 });
 
 app.post('/loginSubmit', async (req, res) => {
@@ -199,7 +174,8 @@ app.post('/loginSubmit', async (req, res) => {
     }
 
 
-    req.session.user = { username: user.username, email: user.email };
+    req.session.user = { username: user.username, email: user.email, userType: user.userType };
+
     res.redirect('/members');
 });
 
@@ -209,18 +185,11 @@ app.get('/members', (req, res) => {
     }
 
     const username = req.session.user.username;
-
     const images = ['image1.jpg', 'image2.jpg', 'image3.jpg'];
-    const randomIndex = Math.floor(Math.random() * images.length);
-    const selectedImage = images[randomIndex];
 
-    res.send(`
-        <h1>Hello, ${username}.</h1>
-        <img src="${selectedImage}" alt="Random Image" style="max-width:300px;">
-        <br><br>
-        <a href="/logout">Sign out</a>
-    `);
+    res.render('members', { username: username, images: images });
 });
+
 
 
 app.get('/logout', (req, res) => {
@@ -232,12 +201,61 @@ app.get('/logout', (req, res) => {
     });
 });
 
+app.get('/admin', async (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login'); // Redirect to login if no user is logged in
+    }
+
+    const user = await User.findOne({ email: req.session.user.email });
+
+    if (!user) {
+        return res.redirect('/login'); // Redirect if the user does not exist
+    }
+
+    const isAdmin = user.userType === 'admin'; // Check if the user is an admin
+
+    try {
+        const users = isAdmin ? await User.find({}, 'username email userType') : []; // Fetch users only if admin
+        res.render('admin', { isAdmin, users, user: req.session.user });
+    } catch (err) {
+        res.status(500).send('Error retrieving users.');
+    }
+});
+
+app.post('/admin/promote/:email', async (req, res) => {
+    try {
+        const userToPromote = await User.findOne({ email: req.params.email });
+        if (!userToPromote) {
+            return res.status(404).send('User not found.');
+        }
+
+        userToPromote.userType = 'admin';
+        await userToPromote.save();
+
+        res.redirect('/admin');
+    } catch (err) {
+        res.status(500).send('Error promoting user.');
+    }
+});
+
+app.post('/admin/demote/:email', async (req, res) => {
+    try {
+        const userToDemote = await User.findOne({ email: req.params.email });
+        if (!userToDemote) {
+            return res.status(404).send('User not found.');
+        }
+
+        userToDemote.userType = 'user';
+        await userToDemote.save();
+
+        res.redirect('/admin');
+    } catch (err) {
+        res.status(500).send('Error demoting user.');
+    }
+});
+
 app.use((req, res) => {
-    res.status(404).send(`
-        <h1>404 - Page Not Found</h1>
-        <p>The page you are looking for does not exist.</p>
-        <a href="/">Return to Home</a>
-    `);
+    res.render('404');
 });
 
 

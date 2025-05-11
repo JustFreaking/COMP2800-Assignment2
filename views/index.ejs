@@ -1,0 +1,25 @@
+<%- include("templates/header.ejs") %>
+<div class="container mt-5">
+    <% if (user) { %>
+        <div class="alert alert-success" role="alert">
+            <p>Hello <strong><%= user.username %></strong>!</p>
+        </div>
+
+        <form method="GET" action="/members" class="mb-3">
+            <button type="submit" class="btn btn-primary btn-block">Go to Members Area</button>
+        </form>
+
+        <form method="GET" action="/logout">
+            <button type="submit" class="btn btn-danger btn-block">Logout</button>
+        </form>
+    <% } else { %>
+        <form method="GET" action="/signup" class="mb-3">
+            <button type="submit" class="btn btn-success btn-block">Sign Up</button>
+        </form>
+
+        <form method="GET" action="/login">
+            <button type="submit" class="btn btn-primary btn-block">Log in</button>
+        </form>
+    <% } %>
+</div>
+<%- include("templates/footer.ejs") %>

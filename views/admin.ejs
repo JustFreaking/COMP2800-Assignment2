@@ -1,0 +1,50 @@
+<%- include('templates/header') %>
+
+<div class="container mt-4 text-center">
+    <% if (isAdmin) { %>
+        <h1 class="mb-4">Admin Panel</h1>
+        <table class="table table-striped">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Username</th>
+                    <th>User Type</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% users.forEach(user=> { %>
+                    <tr>
+                        <td>
+                            <%= user.username %>
+                        </td>
+                        <td>(<%= user.userType %>)</td>
+                        <td>
+                            <form action="/admin/promote/<%= user.email %>" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-success btn-sm">Promote to Admin</button>
+                            </form>
+                            <form action="/admin/demote/<%= user.email %>" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-danger btn-sm">Demote to User</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <% }) %>
+            </tbody>
+        </table>
+        <% } else { %>
+            <div class="container text-center mt-5">
+                <h1 class="display-4 text-warning">403 - Forbidden</h1>
+                <h2 class="display-4 text-warning">STOP!</h2>
+                <p class="lead">You don't have permission to access this page.</p>
+                <p>Your user type: <strong>
+                        <%= user.userType %>
+                    </strong></p>
+                <img src="/how_dare_you.png" alt="403 Image" class="img-fluid my-4"
+                    style="max-width: 100%; width: 500px;">
+                <div class="mt-4">
+                    <a href="/members" class="btn btn-primary">Go back to Members Page</a>
+                </div>
+            </div>
+            <% } %>
+</div>
+
+<%- include('templates/footer') %>
